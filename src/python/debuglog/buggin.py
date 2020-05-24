@@ -38,7 +38,7 @@ def applyFilters(line, signature_map, *signature_names):
             result = result and not signature in line
         else:
             result = result and signature in line
-        negate_next_filter = False
+        negate_next_term = False
     return result
 
 def call_filter_log(src_log, output_dir, log_ext, signature_map, *signature_names):
@@ -54,8 +54,8 @@ PLATFORM_LOADER = "platformloader"
 APP_LOADER = "apploader"
 NULL_PD = "nullpd"
 NULL_LOC = "nullloc"
-
-signature_map = {
+TECH = "tech"
+default_signature_map = {
     CLASSLOAD: "!PM!ClassLoad|",
     BLACKLISTED: "&result=BLACKLISTED",
     NULL_LOADER: "|classloader=NULL_LOADER&",
@@ -63,15 +63,15 @@ signature_map = {
     PLATFORM_LOADER: "|classloader=platform&",
     APP_LOADER: "|classloader=app&",
     NULL_PD: "&location=NULL_ProtectionDomain",
-    NULL_LOC: "&location=null"
+    NULL_LOC: "&location=null",
+    TECH: " TechnologyClassListener]"
 }
 
-data_dir = "/Users/philmcgee/GitHub/debug-log/data"
-results_dir = "/Users/philmcgee/GitHub/debug-log/results"
-log_ext = ".log"
-debug_log = makeLogPath(data_dir, log_ext, "petclinic")
+data_dir = "data"
+results_dir = "results"
+petclinic_log = makeLogPath(data_dir, ".log", "petclinic")
 
-logs_signature_names = [
+default_signature_names = [
     [CLASSLOAD],
     # [CLASSLOAD, BLACKLISTED],
     # [CLASSLOAD, NOT, BLACKLISTED],
@@ -86,9 +86,11 @@ logs_signature_names = [
     [CLASSLOAD, NOT, NULL_LOADER, NOT, NULL_LOADER_NAME, NOT, PLATFORM_LOADER, NOT, APP_LOADER]
 ]
 
-def generate_filtered_logs(logs_signature_names):
+def generate_filtered_logs(logs_signature_names, debug_log=petclinic_log, output_dir=results_dir,
+            log_ext=".log", signature_map=default_signature_map):
     for signature_names in logs_signature_names:
-        call_filter_log(debug_log, results_dir, log_ext, signature_map, *signature_names)
+        call_filter_log(debug_log, output_dir, log_ext, signature_map, *signature_names)
 
-generate_filtered_logs(logs_signature_names)
+if __name__ == "__main__":
+    generate_filtered_logs(default_signature_names,  petclinic_log, results_dir)
 
