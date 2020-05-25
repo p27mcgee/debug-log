@@ -2,28 +2,10 @@ import sqlite3
 import re
 import src.python.logdb.createdb as createdb
 
-# sqlite has select as instead of select into
-# but we'd like to specify the schema of table tech
-# more precisely thanthis allows
-#     create_sql = """create table tech
-#     as select
-#         log.line as line,
-#         case
-#             when log.entry like "% - Adding %" then "add"
-#             when log.entry like "% - Not putting %" then "noput"
-#             when log.entry like "% - Couldn't find app for %" then "noapp"
-#             else "undef"
-#         end as type
-#     from log
-#     where log.entry like "% TechnologyClassListener]%"
-# """
-
 TECH = "tech"
 NOAPP = "noapp"
 NOPUT = "noput"
 ADD = "add"
-PWACL = "parrwebappcl"
-PLATCL = "platcl"
 
 signature_map = {
     TECH: "TechnologyClassListener]",
@@ -33,20 +15,15 @@ signature_map = {
 }
 
 tech_types = [NOAPP, ADD, NOPUT]
-
-class_extractors = {
-    NOAPP: re.compile(r"\- Couldn't find app for ([^/]+)\/"),
-    NOPUT: re.compile(r"\- Not putting (.+) in orphanage"),
-    ADD: re.compile(r"\- Adding (.+) to orphanage")
-}
-
-classloader_extractors = {
-    NOAPP: re.compile(r"\- Couldn't find app for [^/]+\/(.+)$"),
-    NOPUT: re.compile(r"in orphanage as its from (.+)$"),
+value_extractors = {
+    NOAPP: re.compile(r"- Couldn't find app for (?P<fqcn>[^/]+)\/(?P<classloader>.+)$"),
+    NOPUT: re.compile(r"\- Not putting (?P<fqcn>\S+) in orphanage as its from (?P<classloader>.+)$"),
+    ADD: re.compile(r"\- Adding (?P<fqcn>\S+) to orphanage(?P<classloader>~NEVERMATCH~)?")
 }
 
 def initialize_tech_table(connection):
     cursor = connection.cursor()
+
     drop_sql = "drop table if exists tech"
     cursor.execute(drop_sql)
 
@@ -59,24 +36,23 @@ def initialize_tech_table(connection):
     """
     cursor.execute(create_sql)
 
-    # tech_type_idx_sql = "create index idx_tech_type on tech(type)"
-    # cursor.execute(tech_type_idx_sql)
-    #
-    # tech_package_idx_sql = "create index idx_tech_package on tech(package)"
-    # cursor.execute(tech_package_idx_sql)
-    #
-    # tech_class_idx_sql = "create index idx_tech_class_package on tech(class, package)"
-    # cursor.execute(tech_class_idx_sql)
-    #
-    # tech_classloader_idx_sql = "create index idx_tech_classloader on tech(classloader)"
-    # cursor.execute(tech_classloader_idx_sql)
+    # add indexes
+    tech_type_idx_sql = "create index idx_tech_type on tech(type)"
+    cursor.execute(tech_type_idx_sql)
+    tech_package_idx_sql = "create index idx_tech_package on tech(package)"
+    cursor.execute(tech_package_idx_sql)
+    tech_class_idx_sql = "create index idx_tech_class_package on tech(class, package)"
+    cursor.execute(tech_class_idx_sql)
+    tech_classloader_idx_sql = "create index idx_tech_classloader on tech(classloader)"
+    cursor.execute(tech_classloader_idx_sql)
 
+    # populate
     nrows = 0
     select_tech_sql = "select line, entry from log where entry like '% TechnologyClassListener]%'"
     cursor.execute(select_tech_sql)
     while True:
         print(".", end="")
-        rows = cursor.fetchmany(100)
+        rows = cursor.fetchmany(500)
         if len(rows) == 0:
             cursor.close()
             break
@@ -97,37 +73,20 @@ def add_tech_rows(log_tech_rows, connection):
                 type = tech_type
                 break
         try:
-            fqcn = class_extractors[type].search(entry).group(1)
+            fqcn, classloader = value_extractors[type].search(entry).group('fqcn', 'classloader')
+            if classloader == None:
+                classloader = "NULL"
+            else:
+                classloader = "'" + classloader + "'"
         except:
-            print("No match for class regex in line {} for type {} in entry: {}".format(str(line), type, entry))
+            print("No match for extractor regex in line {} for type {} in entry: {}".format(str(line), type, entry))
             raise Exception("Failure extracting class from log line " + str(line))
         lastdot = fqcn.rfind('.')
         classname = fqcn[lastdot+1:]
         package = fqcn[:lastdot]
-        try:
-            if type == ADD:
-                classloader = "NULL"
-            else:
-                classloader = "'" + classloader_extractors[type].search(entry).group(1) + "'"
-        except:
-            print("No match for classloader regex in line {} for type {} in entry: {}".format(str(line), type, entry))
-            raise Exception("Failure extracting classloader from log line " + str(line))
         insert_sql += "\n({}, '{}', '{}', '{}', {})".format(str(line), type, classname, package, classloader)
     cursor.execute(insert_sql)
     cursor.close
-
-# """
-#         as select
-#             log.line as line,
-#             case
-#                 when log.entry like "% - Adding %" then "add"
-#                 when log.entry like "%- Not putting %" then "noput"
-#                 when log.entry like "% - Couldn't find app for %" then "noapp"
-#                 else "undef"
-#             end as type
-#         from log
-#         where log.entry like "% TechnologyClassListener]%"
-# """
 
 dbname = "petclinic"
 
