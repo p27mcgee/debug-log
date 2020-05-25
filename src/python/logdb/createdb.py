@@ -3,7 +3,7 @@ import src.python.debuglog.buggin as buggin
 
 chunksize = 10000;
 
-def add_chunk_of_rows(chunk, cursor):
+def add_chunk_of_log_enties(chunk, cursor):
     cursor.execute("begin transaction")
     result = cursor.executemany("insert into log values(?,?)", chunk)
     cursor.execute("commit")
@@ -17,12 +17,12 @@ def initialize_log_table(infile, cursor):
     with open(infile, 'r') as inlog:
         chunk = []
         for idx, entry in enumerate(inlog):
-            chunk.append((idx + 1, entry))
+            chunk.append((idx + 1, entry.strip()))
             if idx % chunksize == chunksize - 1:
-                total += add_chunk_of_rows(chunk, cursor)
+                total += add_chunk_of_log_enties(chunk, cursor)
                 print(".", end ="")
                 chunk.clear()
-        total += add_chunk_of_rows(chunk, cursor)
+        total += add_chunk_of_log_enties(chunk, cursor)
     print("\nAdded {} rows".format(str(total)))
 
 def create_log_table(cursor):
@@ -32,15 +32,14 @@ def create_log_table(cursor):
 def connectdb(dbname):
     return sqlite3.connect(dbname, isolation_level=None)
 
-def getcursor(connect):
-    return connect.cursor()
+def create_log_db(log_path, dbname):
+    cursor = connectdb(dbname + ".db").cursor()
+    create_log_table(cursor)
+    initialize_log_table(log_path, cursor)
 
 logname = "petclinic"
 log_dir = "data"
 petclinic_log = buggin.makeLogPath(log_dir, ".log", "petclinic")
-dbname = logname + ".db"
 
-cursor = getcursor(connectdb(dbname))
-create_log_table(cursor)
-initialize_log_table(petclinic_log, cursor)
-
+if __name__ == "__main__":
+    create_log_db(petclinic_log, logname)
