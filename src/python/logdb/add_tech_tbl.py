@@ -18,7 +18,7 @@ tech_types = [NOAPP, ADD, NOPUT]
 value_extractors = {
     NOAPP: re.compile(r"- Couldn't find app for (?P<fqcn>[^/]+)\/(?P<classloader>.+)$"),
     NOPUT: re.compile(r"\- Not putting (?P<fqcn>\S+) in orphanage as its from (?P<classloader>.+)$"),
-    ADD: re.compile(r"\- Adding (?P<fqcn>\S+) to orphanage(?P<classloader>~NEVERMATCH~)?")
+    ADD: re.compile(r"\- Adding (?P<fqcn>\S+) to orphanage(?P<classloader>~NOCL~)?")
 }
 
 def initialize_tech_table(connection):

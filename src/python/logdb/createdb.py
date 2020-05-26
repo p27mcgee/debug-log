@@ -1,6 +1,18 @@
 import sqlite3
 import src.python.debuglog.buggin as buggin
 
+def classAndPackage(fqcn):
+    lastdot = fqcn.rfind('.')
+    classname = fqcn[lastdot + 1:]
+    package = fqcn[:lastdot]
+    return classname, package
+
+def quotOrNull(txt):
+    if txt == None:
+        return "NULL"
+    else:
+        return "'" + txt + "'"
+
 chunksize = 10000;
 
 def add_chunk_of_log_enties(chunk, cursor):
