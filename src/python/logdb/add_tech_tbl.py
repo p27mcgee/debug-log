@@ -90,6 +90,7 @@ def add_tech_rows(log_tech_rows, connection):
 
 dbname = "petclinic"
 
+
 if __name__ == "__main__":
     connection = createdb.connectdb(dbname + ".db")
     initialize_tech_table(connection)

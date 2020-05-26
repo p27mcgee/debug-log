@@ -1,5 +1,5 @@
 import sqlite3
-import src.python.debuglog.buggin as buggin
+from os import path
 
 def classAndPackage(fqcn):
     lastdot = fqcn.rfind('.')
@@ -45,13 +45,17 @@ def connectdb(dbname):
     return sqlite3.connect(dbname, isolation_level=None)
 
 def create_log_db(log_path, dbname):
-    cursor = connectdb(dbname + ".db").cursor()
+    connection = connectdb(dbname)
+    cursor = connection.cursor()
     create_log_table(cursor)
     initialize_log_table(log_path, cursor)
+    cursor.close()
+    return connection
 
 logname = "petclinic"
 log_dir = "data"
-petclinic_log = buggin.makeLogPath(log_dir, ".log", "petclinic")
 
 if __name__ == "__main__":
-    create_log_db(petclinic_log, logname)
+    petclinic_log = path.join(log_dir, logname + ".log")
+    petclinit_db = path.join("", logname + ".db")
+    create_log_db(petclinic_log, petclinit_db)

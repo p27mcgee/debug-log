@@ -3,7 +3,6 @@
 from os import path
 
 SKEWER = "-"
-
 def makeLogPath(dir, log_ext, *signature_names):
     filename = ""
     for signature_name in signature_names:

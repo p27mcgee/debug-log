@@ -1,4 +1,4 @@
-create_classinfo_sql = """
+create_classinfo_tbl_sql = """
 create table classinfo
 as
 select log.line, pmcl.class, pmcl.package, log.entry
@@ -9,3 +9,4 @@ select log.line, tech.class, tech.package, log.entry
 from log
 join tech on tech.line = log.line
 """
+
