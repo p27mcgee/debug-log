@@ -1,9 +1,9 @@
 from os import path
-from urllib.parse import unquote as urldecode
 from src.python.logdb.createdb import create_log_db
 from src.python.logdb.add_tech_tbl import initialize_tech_table
 from src.python.logdb.add_pmcl_tbl import initialize_pmcl_table
 import src.python.logdb.logdb_sql as logdb_sql
+from  src.python.summarizeWebAppClassUsage import summarize_web_app_class_usage
 
 def make_file_path(dir, log_ext, log_name):
     filename = log_name + log_ext
@@ -19,22 +19,6 @@ def display_table_rowcount(cursor, table):
 
 def display_removed_rowcount(cursor, table):
     print("Removed {} rows from table {}.".format(str(cursor.rowcount), table));
-
-def summarize_web_app_class_usage(cursor):
-    print("\nAfter appropriately excluding system and server classes the following Web App classes remain:")
-    locprefix = ""
-    prefixlen = 0
-    for classcount, location, package in cursor.execute(logdb_sql.select_web_app_location_package_counts):
-        if prefixlen == 0 and "apache-tomcat" in location:
-            decoded_location = urldecode(location)
-            tomcat_at = decoded_location.find("/apache-tomcat")
-            if tomcat_at != -1:
-                locprefix = decoded_location[:tomcat_at+1]
-                prefixlen = len(locprefix)
-        dec_loc = urldecode(location)
-        if (prefixlen != 0 and dec_loc.startswith(locprefix)):
-            dec_loc = dec_loc[prefixlen:]
-        print("{} classes in package {} from {}".format(str(classcount), package, dec_loc))
 
 log_name = "petclinic"
 log_ext = ".log"
