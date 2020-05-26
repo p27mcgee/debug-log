@@ -10,3 +10,82 @@ from log
 join tech on tech.line = log.line
 """
 
+#
+remove_tech_noput_classes_from_classinfo_sql = """
+delete from classinfo
+where
+line in (
+    select line
+    from tech
+    where
+    type = "noput"
+    union
+    select pmcl.line
+    from pmcl
+    join tech
+    on tech.class = pmcl.class
+    and tech.package = pmcl.package
+    where tech.type = "noput"
+)
+"""
+
+remove_tech_noapp_not_PWCL_classes_from_classinfo_sql = """
+delete from classinfo
+where
+line in (
+    select line
+    from tech
+    where
+    type = "noapp" and classloader <> "ParallelWebappClassLoader"
+    union
+    select pmcl.line
+    from pmcl
+    join tech
+    on tech.class = pmcl.class
+    and tech.package = pmcl.package
+    and tech.type = "noapp" and tech.classloader <> "ParallelWebappClassLoader"
+)
+"""
+
+remove_pmcl_NULL_ProtectionDomain_classes_from_classinfo_sql = """
+delete from classinfo
+where
+line in (
+select line
+from pmcl
+where pmcl.location == "NULL_ProtectionDomain"
+union
+select tech.line
+from tech
+join pmcl
+on tech.class = pmcl.class
+and tech.package = pmcl.package
+and pmcl.location == "NULL_ProtectionDomain"
+)
+"""
+
+remove_pmcl_result_UNTOUCHABLE_sql = """
+delete from classinfo
+where
+line in (
+select line
+from pmcl
+where pmcl.result == "UNTOUCHABLE"
+union
+select tech.line
+from tech
+join pmcl
+on tech.class = pmcl.class
+and tech.package = pmcl.package
+and pmcl.result == "UNTOUCHABLE"
+)
+"""
+
+select_web_app_location_package_counts = """
+select count(*) as classcount, location, pmcl.package
+from pmcl
+join classinfo
+on pmcl.line = classinfo.line
+group by location, pmcl.package
+order by pmcl.package
+"""
