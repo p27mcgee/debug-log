@@ -80,11 +80,20 @@ and pmcl.result == "UNTOUCHABLE"
 )
 """
 
-select_web_app_location_package_counts = """
+select_web_app_location_joined_on_classinfo_package_counts = """
 select count(*) as classcount, location, pmcl.package
 from pmcl
 join classinfo
 on pmcl.line = classinfo.line
+group by location, pmcl.package
+order by pmcl.package
+"""
+
+select_webinf_location_package_counts = """
+select count(*) as classcount, location, pmcl.package
+from pmcl
+where 
+location like "%WEB-INF%"
 group by location, pmcl.package
 order by pmcl.package
 """
