@@ -10,7 +10,6 @@ from log
 join tech on tech.line = log.line
 """
 
-#
 remove_tech_noput_classes_from_classinfo_sql = """
 delete from classinfo
 where
@@ -88,4 +87,16 @@ join classinfo
 on pmcl.line = classinfo.line
 group by location, pmcl.package
 order by pmcl.package
+"""
+
+select_multiline_messages = """
+select log.line, log.entry
+from log
+where line in (
+select line
+from cont
+union 
+select distinct mesg
+from cont
+)
 """

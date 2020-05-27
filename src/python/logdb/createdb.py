@@ -29,7 +29,7 @@ def initialize_log_table(infile, cursor):
     with open(infile, 'r') as inlog:
         chunk = []
         for idx, entry in enumerate(inlog):
-            chunk.append((idx + 1, entry.strip()))
+            chunk.append((idx + 1, entry.rstrip("\n")))
             if idx % chunksize == chunksize - 1:
                 total += add_chunk_of_log_enties(chunk, cursor)
                 print(".", end ="")
