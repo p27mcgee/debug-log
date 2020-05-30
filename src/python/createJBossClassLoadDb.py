@@ -1,7 +1,8 @@
 from os import path
 from src.python.logdb.createdb import create_log_db
+from src.python.logdb.add_lmcl_tbl import initialize_lmcl_table
+from src.python.logdb.add_acel_tbl import initialize_acel_table
 from src.python.logdb.add_tech_tbl import initialize_tech_table
-from src.python.logdb.deprecated.add_pmcl_tbl import initialize_pmcl_table
 import src.python.logdb.logdb_sql as logdb_sql
 import  src.python.summarizeWebAppClassUsage as summarizeWebAppClassUsage
 
@@ -51,7 +52,7 @@ def filter_classinfo_using_heuristics(cursor):
     display_table_rowcount(cursor, "classinfo")
 
 
-log_name = "petclinic"
+log_name = "JBoss-platform"
 log_ext = ".log"
 log_dir = "data"
 db_name = log_name
@@ -62,19 +63,16 @@ if __name__ == "__main__":
     log_path = make_file_path(log_dir, log_ext, log_name)
     db_path = make_file_path(db_dir, db_ext, db_name)
     connection = create_log_db(log_path, db_path)
-    initialize_tech_table(connection)
-    initialize_pmcl_table(connection)
-    cursor = connection.cursor()
+    initialize_lmcl_table(connection)
+    initialize_acel_table(connection)
+#    initialize_tech_table(connection)
+#     cursor = connection.cursor()
 
-    print("\nCreating classinfo table...")
-    drop_table(cursor, "classinfo")
-    cursor.execute(logdb_sql.create_classinfo_tbl_sql)
-    display_table_rowcount(cursor, "classinfo")
+    # print("\nCreating classinfo table...")
+    # drop_table(cursor, "classinfo")
+    # cursor.execute(logdb_sql.create_classinfo_tbl_sql)
+    # display_table_rowcount(cursor, "classinfo")
 
-    # this is useful only as an independent validation of the location
-    # WEB-INF class filter
-    # filter_classinfo_using_heuristics(cursor)
-
-    summarizeWebAppClassUsage.main(db_path)
+    # summarizeWebAppClassUsage.main(db_path)
 
 

@@ -35,7 +35,7 @@ def initialize_log_table(infile, cursor):
                 print(".", end ="")
                 chunk.clear()
         total += add_chunk_of_log_enties(chunk, cursor)
-    print("\nAdded {} rows".format(str(total)))
+    print("\nAdded {} rows to table {}".format(str(total), "log"))
 
 def create_log_table(cursor):
     sql = "create table if not exists log(line integer primary key, entry text)"
