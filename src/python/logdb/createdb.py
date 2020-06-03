@@ -1,6 +1,6 @@
 import sqlite3
 from os import path
-
+import sys
 def classAndPackage(fqcn):
     lastdot = fqcn.rfind('.')
     classname = fqcn[lastdot + 1:]
@@ -56,6 +56,8 @@ logname = "petclinic"
 log_dir = "data"
 
 if __name__ == "__main__":
-    petclinic_log = path.join(log_dir, logname + ".log")
-    petclinit_db = path.join("", logname + ".db")
-    create_log_db(petclinic_log, petclinit_db)
+    if len(sys.argv) > 1:
+        logname = sys.argv[1]
+    debug_log = path.join(log_dir, logname + ".log")
+    debug_db = path.join("", logname + ".db")
+    create_log_db(debug_log, debug_db)

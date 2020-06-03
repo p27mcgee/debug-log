@@ -1,28 +1,36 @@
 import sqlite3
 import re
+import sys
+from os import path
 import src.python.logdb.createdb as createdb
 from src.python.logdb.createdb import classAndPackage
 from urllib.parse import unquote as urldecode
 
 DEFAULT_TYPE = "default"
 entry_signature = " ApplicationClassEventListener] "
-types = ["noput", "noapp", "addding", "contains"]
+types = ["noput", "noapp", "orphan", "uninventoried", "contains", "used"]
 type_signatures = {
     "noput": "- Not putting ",
     "noapp": "- Couldn't find app for ",
-    "addding": "- Adding ",
-    "contains": "- url @detectLibraryClass"
+    "orphan": " to orphanage",
+    "uninventoried": "missed classload events",
+    "contains": "- url @detectLibraryClass",
+    "used": "- url @detectLibraryClass"
 }
 extracted_val_names = ["fqcn", "location", "application"]
 value_extractors = {
     # - Not putting java.util.Hashtable$KeySet in orphanage as its from bootstrapped classloade
     "noput": re.compile(r"\- Not putting (?P<fqcn>\S+) in orphanage as its from (?P<location>~NOLOC~)?(?P<application>~NOAPP~)?"),
     # - Couldn't find app for org.jboss.Main$ShutdownHook with CodeSource location file:/opt/jboss/bin/run.jar
-    "noapp": re.compile(r"\- Couldn't find app for (?P<fqcn>\S+) with CodeSource location (?P<application>~NOAPP~)?(?P<location>.*)$"),
+    "noapp": re.compile(r"\- Couldn't find app for (?P<fqcn>\S+) with CodeSource path (?P<application>~NOAPP~)?(?P<location>.*)$"),
     # - Adding org.apache.tomcat.util.buf.C2BConverter to list of missed classload events for uninventoried platform-servlet
-    "addding": re.compile(r"\- Adding (?P<fqcn>\S+) to list of missed classload events for uninventoried (?P<location>~NOLOC~)?(?P<application>.*)$"),
+    "orphan": re.compile(r"\- Adding (?P<fqcn>\S+) to orphanage(?P<location>~NOLOC~)?(?P<application>~NOAPP~)?$"),
+    # - Adding org.apache.tomcat.util.buf.C2BConverter to list of missed classload events for uninventoried platform-servlet
+    "uninventoried": re.compile(r"\- Adding (?P<fqcn>\S+) to list of missed classload events for uninventoried (?P<location>~NOLOC~)?(?P<application>.*)$"),
     # - url @detectLibraryClass vfs:/opt/jboss/server/default/deploy/jbossweb.sar/jbossweb.jar/ contains org.apache.tomcat.util.buf.C2BConverter for application "platform-servlet"
     "contains": re.compile(r"\- url \@detectLibraryClass (?P<location>.*) contains (?P<fqcn>\S+) for application \"(?P<application>.*)\"$"),
+    # - Adding {} to library usage for lib {} in application "{}""
+    "used": re.compile(r"\- Adding (?P<fqcn>\S+) to library usage for lib (?P<location>.*)  in application \"(?P<application>.*)\"$"),
     # default type will be a misfit
     DEFAULT_TYPE : re.compile(r"^~NOMATCH~$")
 }
@@ -127,6 +135,11 @@ def find_type(entry):
 def initialize_acel_table(connection):
     initialize_tables(connection)
 
+logname = "petclinic"
+
 if __name__ == "__main__":
-    connection = createdb.connectdb("JBoss-platform.db")
+    if len(sys.argv) > 1:
+        logname = sys.argv[1]
+    debug_db = path.join("", logname + ".db")
+    connection = createdb.connectdb(debug_db)
     initialize_acel_table(connection)
