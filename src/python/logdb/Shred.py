@@ -9,10 +9,8 @@ class Shred(ABC):
     def __init__(self,
                  tbl_creator,
                  entry_selector,
-                 types=None,
-                 type_signatures=None,
-                 extracted_val_names=None,
-                 value_extractors=None,
+                 entry_classifier,
+                 value_extractor,
                  insert_columns=None,
                  insert_sql=None,
                  quiet=False,
@@ -20,31 +18,13 @@ class Shred(ABC):
                  ):
         self.tbl_creator = tbl_creator
         self.entry_selector = entry_selector
-        if types is None:
-            # just one type
-            self.types = [Shred.DEFAULT_TYPE]
-        else:
-            self.types = types
-        if type_signatures is None:
-            # every log entry matches default type
-            self.type_signatures = {Shred.DEFAULT_TYPE: ''}
-        else:
-            self.type_signatures = type_signatures
-        if extracted_val_names is None:
-            # no values extracted from the entry
-            self.extracted_val_names = []
-        else:
-            self.extracted_val_names = extracted_val_names
-        if value_extractors is None:
-            # no values extracted from the entry
-            self.value_extractors = {Shred.DEFAULT_TYPE: re.compile('')}
-        else:
-            self.value_extractors = value_extractors
+        self.entry_classifier = entry_classifier
+        self.value_extractor = value_extractor
         if insert_columns is None:
-            if (len(types) > 1):
-                insert_columns = ['line', 'type'] + extracted_val_names
+            if (len(self.entry_classifier.types) > 1):
+                self.insert_columns = ['line', 'type'] + self.value_extractor.extracted_val_names
             else:
-                insert_columns = ['line'] + extracted_val_names
+                self.insert_columns = ['line'] + self.value_extractor.extracted_val_names
         else:
             self.insert_columns = insert_columns
         if insert_sql is None:
@@ -67,7 +47,7 @@ class Shred(ABC):
 
     @abstractmethod
     def transform_values(self, line, entry, type, extracted_vals):
-        return line, type, extracted_vals["application"], extracted_vals["location"]
+        pass
 
     def initialize_tables(self, connection):
         self.tbl_creator.create_empty_table(connection)
@@ -87,38 +67,28 @@ class Shred(ABC):
                 print("Added {} rows to table {}".format(str(totalMisfits), self.tbl_creator.misfits_tbl_name))
 
     def add_rows(self, log_rows, connection):
-        cursor = connection.cursor()
-        cursor.execute("begin transaction")
-        values = []
-        misfits = []
-        nAdded = 0
-        nMisfits = 0
-        for line, entry in log_rows:
-            type = self.find_type(entry)
-            extractor = self.value_extractors[type]
-            try:
-                match = extractor.search(entry)
-                extracted_vals = {}
-                for extracted_val_name in self.extracted_val_names:
-                    extracted_vals[extracted_val_name] = match.group(extracted_val_name)
-                values.append(self.transform_values(line, entry, type, extracted_vals))
-                nAdded += 1
-            except:
-                if self.show_misfits:
-                    print("No match for extractor regex in entry line {}: {}".format(str(line), entry))
-                misfits.append((line,))
-                nMisfits += 1
-        cursor.executemany(self.insert_sql, values)
-        cursor.executemany(self.insert_misfits_sql, misfits)
-        cursor.execute("commit")
-        cursor.close()
+        with contextlib.closing(connection.cursor()) as cursor:
+            cursor.execute("begin transaction")
+            values = []
+            misfits = []
+            nAdded = 0
+            nMisfits = 0
+            for line, entry in log_rows:
+                type = self.entry_classifier.find_type(entry)
+                try:
+                    extracted_vals = self.value_extractor.extract_values(type, entry, line)
+                    insert_vals = self.transform_values(line, entry, type, extracted_vals)
+                    values.append(insert_vals)
+                    nAdded += 1
+                except:
+                    if self.show_misfits:
+                        print("Extraction/transformation failed in entry line {}: {}".format(str(line), entry))
+                    misfits.append((line,))
+                    nMisfits += 1
+            cursor.executemany(self.insert_sql, values)
+            cursor.executemany(self.insert_misfits_sql, misfits)
+            cursor.execute("commit")
         return nAdded, nMisfits
-
-    def find_type(self, entry):
-        for type in self.types:
-            if self.type_signatures[type] in entry:
-                return type
-        return Shred.DEFAULT_TYPE
 
 
 class ShredTableCreator:
@@ -143,6 +113,7 @@ class ShredTableCreator:
             self.misfits_tbl_name = misfits_tbl_name
         self.create_misfits_sql = "create table {}( line integer primary key references log(line))".format(self.misfits_tbl_name)
         self.drop_misfits_sql = "drop table if exists " + self.misfits_tbl_name
+        super().__init__()
 
     def create_empty_table(self, connection):
         with contextlib.closing(connection.cursor()) as cursor:
@@ -156,6 +127,7 @@ class ShredTableCreator:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute(self.drop_misfits_sql)
                 cursor.execute(self.create_misfits_sql)
+
 
 class ShredEntrySelector:
 
@@ -173,6 +145,7 @@ class ShredEntrySelector:
         else:
             self.select_entries_sql = select_entries_sql
         self.batch_size = batch_size
+        super().__init__()
 
     def select_batches(self, connection):
         with contextlib.closing(connection.cursor()) as cursor:
@@ -182,3 +155,48 @@ class ShredEntrySelector:
                 if len(rows) == 0:
                     break
                 yield rows
+
+
+class ShredEntryClassifier:
+
+    def __init__(self, type_signatures=None):
+        if type_signatures is None:
+            # every log entry matches default type
+            self.type_signatures = {Shred.DEFAULT_TYPE: ''}
+        else:
+            self.type_signatures = type_signatures
+        self.types = self.type_signatures.keys()
+        super().__init__()
+
+    def find_type(self, entry):
+        for type, signature in self.type_signatures.items():
+            if signature in entry:
+                return type
+        return Shred.DEFAULT_TYPE
+
+
+class ShredValueExtractor:
+
+    def __init__(self,
+                 extracted_val_names=None,
+                 value_extractors=None, ):
+        if extracted_val_names is None:
+            # no values extracted from the entry
+            self.extracted_val_names = []
+        else:
+            self.extracted_val_names = extracted_val_names
+        if value_extractors is None:
+            # no values extracted from the entry
+            self.value_extractors = {Shred.DEFAULT_TYPE: re.compile('')}
+        else:
+            self.value_extractors = value_extractors
+        super().__init__()
+
+    def extract_values(self, type, entry, line=None):
+        extracted_vals = {}
+        extractor = self.value_extractors[type]
+        if extractor:
+            match = extractor.search(entry)
+            for extracted_val_name in self.extracted_val_names:
+                extracted_vals[extracted_val_name] = match.group(extracted_val_name)
+        return extracted_vals

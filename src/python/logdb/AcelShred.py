@@ -5,6 +5,8 @@ import src.python.logdb.createdb as createdb
 from src.python.logdb.Shred import Shred
 from src.python.logdb.Shred import ShredTableCreator
 from src.python.logdb.Shred import ShredEntrySelector
+from src.python.logdb.Shred import ShredEntryClassifier
+from src.python.logdb.Shred import ShredValueExtractor
 
 class AcelShred(Shred):
     tbl_name = "acel"
@@ -25,7 +27,7 @@ location text)"""
     entry_signature = " ApplicationClassEventListener] "
     entry_selector = ShredEntrySelector(entry_signature)
 
-    types = ["noput", "noapp", "orphan", "uninventoried", "contains", "adopted", "used"]
+    # types = ["noput", "noapp", "orphan", "uninventoried", "contains", "adopted", "used"]
     type_signatures = {
         "noput": "- Not putting ",
         "noapp": "- Couldn't find app for ",
@@ -35,6 +37,7 @@ location text)"""
         "adopted": "from orphanage by CodeSource path",
         "used": " to library usage for lib ",
     }
+    entry_classifier = ShredEntryClassifier(type_signatures)
 
     extracted_val_names=["fqcn", "location", "application"]
     value_extractors = {
@@ -61,6 +64,7 @@ location text)"""
         # default type will be a misfit
         Shred.DEFAULT_TYPE: re.compile(r"^~NOMATCH~$")
     }
+    value_extractor = ShredValueExtractor(extracted_val_names, value_extractors)
 
     insert_columns = ["line", "type", "class", "package", "application", "location"]
 
@@ -69,10 +73,8 @@ location text)"""
         super().__init__(
                          tbl_creator=AcelShred.tbl_creator,
                          entry_selector=AcelShred.entry_selector,
-                         types=AcelShred.types,
-                         type_signatures=AcelShred.type_signatures,
-                         extracted_val_names=AcelShred.extracted_val_names,
-                         value_extractors=AcelShred.value_extractors,
+                         entry_classifier=AcelShred.entry_classifier,
+                         value_extractor=AcelShred.value_extractor,
                          insert_columns=AcelShred.insert_columns
                          )
 
