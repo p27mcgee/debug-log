@@ -4,6 +4,7 @@ from os import path
 import src.python.logdb.createdb as createdb
 from src.python.logdb.Shred import Shred
 from src.python.logdb.Shred import ShredTableCreator
+from src.python.logdb.Shred import ShredEntrySelector
 
 class AcelShred(Shred):
     tbl_name = "acel"
@@ -22,6 +23,7 @@ location text)"""
     tbl_creator = ShredTableCreator(tbl_name, create_tbl_sql, tbl_index_sqls)
 
     entry_signature = " ApplicationClassEventListener] "
+    entry_selector = ShredEntrySelector(entry_signature)
 
     types = ["noput", "noapp", "orphan", "uninventoried", "contains", "adopted", "used"]
     type_signatures = {
@@ -66,7 +68,7 @@ location text)"""
     def __init__(self):
         super().__init__(
                          tbl_creator=AcelShred.tbl_creator,
-                         entry_signature=AcelShred.entry_signature,
+                         entry_selector=AcelShred.entry_selector,
                          types=AcelShred.types,
                          type_signatures=AcelShred.type_signatures,
                          extracted_val_names=AcelShred.extracted_val_names,

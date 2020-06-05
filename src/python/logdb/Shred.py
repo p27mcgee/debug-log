@@ -8,10 +8,9 @@ class Shred(ABC):
 
     def __init__(self,
                  tbl_creator,
-                 entry_signature=None,  #
+                 entry_selector,
                  types=None,
                  type_signatures=None,
-                 select_entries_sql=None,   #
                  extracted_val_names=None,
                  value_extractors=None,
                  insert_columns=None,
@@ -20,11 +19,7 @@ class Shred(ABC):
                  show_misfits=False
                  ):
         self.tbl_creator = tbl_creator
-        if entry_signature is None:
-            # matches every log entry
-            self.entry_signature = ''
-        else:
-            self.entry_signature = entry_signature
+        self.entry_selector = entry_selector
         if types is None:
             # just one type
             self.types = [Shred.DEFAULT_TYPE]
@@ -35,10 +30,6 @@ class Shred(ABC):
             self.type_signatures = {Shred.DEFAULT_TYPE: ''}
         else:
             self.type_signatures = type_signatures
-        if select_entries_sql is None:
-            self.select_entries_sql = "select line, entry from log where entry like '%{}%'".format(self.entry_signature)
-        else:
-            self.select_entries_sql = select_entries_sql
         if extracted_val_names is None:
             # no values extracted from the entry
             self.extracted_val_names = []
@@ -84,18 +75,10 @@ class Shred(ABC):
         self.populate_tables(connection)
 
     def populate_tables(self, connection):
-        with contextlib.closing(connection.cursor()) as cursor:
             totalAdded = 0
             totalMisfits = 0
-
-            cursor.execute(self.select_entries_sql)
-            while True:
+            for rows in self.entry_selector.select_batches(connection):
                 print(".", end="")
-                rows = cursor.fetchmany(1000)
-                if len(rows) == 0:
-                    cursor.close()
-                    break
-
                 nAdded, nMisfits = self.add_rows(rows, connection)
                 totalAdded += nAdded
                 totalMisfits += nMisfits
@@ -191,14 +174,11 @@ class ShredEntrySelector:
             self.select_entries_sql = select_entries_sql
         self.batch_size = batch_size
 
-    def select_batch(self, connection):
-        # with contextlib.closing(connection.cursor()) as cursor:
-        cursor = connection.cursor
-        cursor.execute(self.select_entries_sql)
-        while True:
-            print(".", end="")
-            rows = cursor.fetchmany(1000)
-            if len(rows) == 0:
-                break
-            yield rows
-        cursor.close()
+    def select_batches(self, connection):
+        with contextlib.closing(connection.cursor()) as cursor:
+            cursor.execute(self.select_entries_sql)
+            while True:
+                rows = cursor.fetchmany(1000)
+                if len(rows) == 0:
+                    break
+                yield rows
