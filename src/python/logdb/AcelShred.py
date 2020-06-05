@@ -3,6 +3,7 @@ import sys
 from os import path
 import src.python.logdb.createdb as createdb
 from src.python.logdb.Shred import Shred
+from src.python.logdb.Shred import ShredTableCreator
 
 class AcelShred(Shred):
     tbl_name = "acel"
@@ -18,6 +19,7 @@ location text)"""
                            "create index idx_acel_package on acel(package)",
                            "create index idx_acel_class_package on acel(class, package)"
                        ]
+    tbl_creator = ShredTableCreator(tbl_name, create_tbl_sql, tbl_index_sqls)
 
     entry_signature = " ApplicationClassEventListener] "
 
@@ -62,9 +64,8 @@ location text)"""
 
 
     def __init__(self):
-        super().__init__(tbl_name=AcelShred.tbl_name,
-                         create_tbl_sql=AcelShred.create_tbl_sql,
-                         tbl_index_sqls=AcelShred.tbl_index_sqls,
+        super().__init__(
+                         tbl_creator=AcelShred.tbl_creator,
                          entry_signature=AcelShred.entry_signature,
                          types=AcelShred.types,
                          type_signatures=AcelShred.type_signatures,
