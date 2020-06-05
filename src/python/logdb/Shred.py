@@ -1,9 +1,9 @@
-import sqlite3
 import re
 from abc import ABC, abstractmethod
 
 # import src.python.logdb.createdb as createdb
 # from src.python.logdb.createdb import classAndPackage
+
 
 class Shred(ABC):
     #    log_tbl_name = 'log'
@@ -92,22 +92,21 @@ class Shred(ABC):
         self.show_misfits = show_misfits
         super().__init__()
 
-
+    @abstractmethod
     def transform_values(self, line, entry, type, extracted_vals):
-        classname, package = self.classAndPackage(extracted_vals["fqcn"])
-        return line, type, classname, package, extracted_vals["application"], extracted_vals["location"]
+        return line, type, extracted_vals["application"], extracted_vals["location"]
 
     def initialize_tables(self, connection):
         cursor = connection.cursor()
         self.create_table(cursor)
-        self.create_misfits_table(self, cursor)
+        self.create_misfits_table(cursor)
         cursor.close()
         self.populate_tables(connection)
 
     def create_table(self, cursor):
-        cursor.execute(self.drop_table_sql)
-        cursor.execute(self.create_sql)
-        for index_sql in self.table_index_sqls:
+        cursor.execute(self.drop_tbl_sql)
+        cursor.execute(self.create_tbl_sql)
+        for index_sql in self.tbl_index_sqls:
             cursor.execute(index_sql)
 
     def create_misfits_table(self, cursor):
@@ -155,8 +154,8 @@ class Shred(ABC):
                     print("No match for extractor regex in entry line {}: {}".format(str(line), entry))
                 misfits.append((line,))
                 nMisfits += 1
-        cursor.executemany(self.insert_sql, values);
-        cursor.executemany(self.insert_misfits_sql, misfits);
+        cursor.executemany(self.insert_sql, values)
+        cursor.executemany(self.insert_misfits_sql, misfits)
         cursor.execute("commit")
         cursor.close()
         return nAdded, nMisfits
