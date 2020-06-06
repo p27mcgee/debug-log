@@ -82,12 +82,6 @@ location text)"""
         classname, package = self.classAndPackage(extracted_vals["fqcn"])
         return line, type, classname, package, extracted_vals["application"], extracted_vals["location"]
 
-    def classAndPackage(self, fqcn):
-        lastdot = fqcn.rfind('.')
-        classname = fqcn[lastdot + 1:]
-        package = fqcn[:lastdot]
-        return classname, package
-
 
 logname = "petclinic"
 

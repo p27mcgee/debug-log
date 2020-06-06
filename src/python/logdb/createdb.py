@@ -1,4 +1,5 @@
 import sqlite3
+import contextlib
 from os import path
 import sys
 def classAndPackage(fqcn):
@@ -21,38 +22,37 @@ def add_chunk_of_log_enties(chunk, cursor):
     cursor.execute("commit")
     return len(chunk)
 
-def initialize_log_table(infile, cursor):
+def initialize_log_table(infile, connection):
     print("Initializing log table from {}".format(infile))
     total = 0
-    # truncate log table
-    cursor.execute("delete from log")
-    with open(infile, 'r') as inlog:
-        chunk = []
-        for idx, entry in enumerate(inlog):
-            chunk.append((idx + 1, entry.rstrip("\n")))
-            if idx % chunksize == chunksize - 1:
-                total += add_chunk_of_log_enties(chunk, cursor)
-                print(".", end ="")
-                chunk.clear()
-        total += add_chunk_of_log_enties(chunk, cursor)
+    with contextlib.closing(connection.cursor()) as cursor:
+        # truncate log table
+        cursor.execute("delete from log")
+        with open(infile, 'r') as inlog:
+            chunk = []
+            for idx, entry in enumerate(inlog):
+                chunk.append((idx + 1, entry.rstrip("\n")))
+                if idx % chunksize == chunksize - 1:
+                    total += add_chunk_of_log_enties(chunk, cursor)
+                    print(".", end ="")
+                    chunk.clear()
+            total += add_chunk_of_log_enties(chunk, cursor)
     print("\nAdded {} rows to table {}".format(str(total), "log"))
 
-def create_log_table(cursor):
-    sql = "create table if not exists log(line integer primary key, entry text)"
-    cursor.execute(sql)
+def create_log_table(connection):
+    with contextlib.closing(connection.cursor()) as cursor:
+        cursor.execute("create table if not exists log(line integer primary key, entry text)")
 
 def connectdb(dbname):
     return sqlite3.connect(dbname, isolation_level=None)
 
 def create_log_db(log_path, dbname):
     connection = connectdb(dbname)
-    cursor = connection.cursor()
-    create_log_table(cursor)
-    initialize_log_table(log_path, cursor)
-    cursor.close()
+    create_log_table(connection)
+    initialize_log_table(log_path, connection)
     return connection
 
-logname = "petclinic"
+logname = "san-sb-petclinic"
 log_dir = "data"
 
 if __name__ == "__main__":

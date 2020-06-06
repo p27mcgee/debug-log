@@ -13,6 +13,7 @@ class Shred(ABC):
                  value_extractor,
                  insert_columns=None,
                  insert_sql=None,
+                 insert_misfits_sql=None,
                  quiet=False,
                  show_misfits=False
                  ):
@@ -40,7 +41,10 @@ class Shred(ABC):
             self.insert_sql += ")"
         else:
             self.insert_sql = insert_sql
-        self.insert_misfits_sql = "insert into {} (line) values (?)".format(self.tbl_creator.misfits_tbl_name)
+        if insert_misfits_sql is None:
+            self.insert_misfits_sql = "insert into {} (line) values (?)".format(self.tbl_creator.misfits_tbl_name)
+        else:
+            self.insert_misfits_sql = insert_misfits_sql
         self.quiet = quiet
         self.show_misfits = show_misfits
         super().__init__()
@@ -48,6 +52,9 @@ class Shred(ABC):
     @abstractmethod
     def transform_values(self, line, entry, type, extracted_vals):
         pass
+
+    def transform_misfits(self, line, last_good_line):
+        return (line,)
 
     def initialize_tables(self, connection):
         self.tbl_creator.create_empty_table(connection)
@@ -57,16 +64,17 @@ class Shred(ABC):
     def populate_tables(self, connection):
             totalAdded = 0
             totalMisfits = 0
+            last_good_line = -1
             for rows in self.entry_selector.select_batches(connection):
                 print(".", end="")
-                nAdded, nMisfits = self.add_rows(rows, connection)
+                nAdded, nMisfits, last_good_line = self.add_rows(rows, last_good_line, connection)
                 totalAdded += nAdded
                 totalMisfits += nMisfits
             if not self.quiet:
                 print("\nAdded {} rows to table {}".format(str(totalAdded), self.tbl_creator.tbl_name))
                 print("Added {} rows to table {}".format(str(totalMisfits), self.tbl_creator.misfits_tbl_name))
 
-    def add_rows(self, log_rows, connection):
+    def add_rows(self, log_rows, last_good_line, connection):
         with contextlib.closing(connection.cursor()) as cursor:
             cursor.execute("begin transaction")
             values = []
@@ -79,16 +87,25 @@ class Shred(ABC):
                     extracted_vals = self.value_extractor.extract_values(type, entry, line)
                     insert_vals = self.transform_values(line, entry, type, extracted_vals)
                     values.append(insert_vals)
+                    last_good_line = line
                     nAdded += 1
                 except:
                     if self.show_misfits:
                         print("Extraction/transformation failed in entry line {}: {}".format(str(line), entry))
-                    misfits.append((line,))
+                    misfit_vals = self.transform_misfits(line, last_good_line)
+                    misfits.append(misfit_vals)
                     nMisfits += 1
             cursor.executemany(self.insert_sql, values)
             cursor.executemany(self.insert_misfits_sql, misfits)
             cursor.execute("commit")
-        return nAdded, nMisfits
+        return nAdded, nMisfits, last_good_line
+
+
+    def classAndPackage(self, fqcn):
+        lastdot = fqcn.rfind('.')
+        classname = fqcn[lastdot + 1:]
+        package = fqcn[:lastdot]
+        return classname, package
 
 
 class ShredTableCreator:
@@ -98,6 +115,8 @@ class ShredTableCreator:
                  create_tbl_sql,
                  tbl_index_sqls=None,
                  misfits_tbl_name=None, # pass empty string "" for no misfits table
+                 create_misfits_sql=None,
+                 misfits_index_sqls=None
                  ):
         self.tbl_name = tbl_name
         self.create_tbl_sql = create_tbl_sql
@@ -111,7 +130,15 @@ class ShredTableCreator:
             self.misfits_tbl_name = tbl_name + "_misfits"
         else:
             self.misfits_tbl_name = misfits_tbl_name
-        self.create_misfits_sql = "create table {}( line integer primary key references log(line))".format(self.misfits_tbl_name)
+        if create_misfits_sql is None:
+            self.create_misfits_sql = "create table {}( line integer primary key references log(line))".format(
+                self.misfits_tbl_name)
+        else:
+            self.create_misfits_sql = create_misfits_sql
+        if misfits_index_sqls is None:
+            self.misfits_index_sqls = []
+        else:
+            self.misfits_index_sqls = misfits_index_sqls
         self.drop_misfits_sql = "drop table if exists " + self.misfits_tbl_name
         super().__init__()
 
@@ -127,6 +154,8 @@ class ShredTableCreator:
             with contextlib.closing(connection.cursor()) as cursor:
                 cursor.execute(self.drop_misfits_sql)
                 cursor.execute(self.create_misfits_sql)
+                for index_sql in self.misfits_index_sqls:
+                    cursor.execute(index_sql)
 
 
 class ShredEntrySelector:
@@ -151,7 +180,7 @@ class ShredEntrySelector:
         with contextlib.closing(connection.cursor()) as cursor:
             cursor.execute(self.select_entries_sql)
             while True:
-                rows = cursor.fetchmany(1000)
+                rows = cursor.fetchmany(self.batch_size)
                 if len(rows) == 0:
                     break
                 yield rows
