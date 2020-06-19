@@ -30,18 +30,13 @@ def create_amf(agent_path, log_path):
     amf_file = 'Not found.'
     for line in lines:
         if line.startswith("Agent metrics written to "):
-            amf_file = line.lstrip("Agent metrics written to ")
+            amf_file = line.lstrip("Agent metrics written to ").rstrip('\n')
             break
     if verbose:
         print('amf_file: ' + amf_file)
     return amf_file
 
-if __name__ == '__main__':
-    # agent_path = agent_getter.download_latest_agent()
-    # FIXME
-    agent_path = agent_getter.dummy_latest_agent()
-    log_path = 'data/san-sb-petclinic.log'
-    amf_path = create_amf(agent_path, log_path)
+def summarize_amf(amf_path):
     amf_contents = list_amf_contents(amf_path)
     if verbose:
         print('amf_contents: ' + str(amf_contents))
@@ -53,3 +48,13 @@ if __name__ == '__main__':
     print("apps.decode(): " + apps.decode())
     print("apps: " + base64.b64decode(get_amf_entry(amf_path, 'apps.json').decode()).decode("utf-8"))
     print("features: " + get_amf_entry(amf_path, 'features.json').decode("utf-8"))
+
+
+def main():
+    agent_path = agent_getter.get_latest_agent()
+    log_path = 'data/san-sb-petclinic.log'
+    amf_path = create_amf(agent_path, log_path)
+    summarize_amf(amf_path)
+
+if __name__ == '__main__':
+    main()

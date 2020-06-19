@@ -50,39 +50,63 @@ def download_verified_agent(version, to_dir=''):
     sha1 = get_response_or_raise(sha1_url).content.decode();
     if verbose:
         print("sha1: " + str(sha1))
+
+    jar_name = jar_name_format.format(version)
+    jar_path = path.join(os.getcwd(), path.join(jar_dir, jar_name))
+    existing_jar = existing_agent_download(jar_path)
+    if existing_jar:
+        if valid_content(sha1, existing_jar):
+            if verbose:
+                print("Valid jar {} already exists.".format(jar_path))
+            return jar_path
+        else:
+            print("Removing invalid jar at {}".format(jar_path))
+            os.remove(jar_path)
+
     jar_url = jar_url_format.format(version)
     jar_resp = get_response_or_raise(jar_url);
     if verbose:
         print("jar_resp: " + str(jar_resp))
     jar_content = jar_resp.content
-    hasher = hashlib.sha1()
-    hasher.update(jar_content)
-    jar_hash = hasher.hexdigest()
-    if verbose:
-        print("jar sha1: " + str(jar_hash))
-    if jar_hash != sha1:
-        raise Exception("Jar hash {} does not match downloaded sha1 {}".format(jar_hash, sha1))
-    jar_name = jar_name_format.format(version)
-    jar_path = path.join(os.getcwd(), path.join(jar_dir, jar_name))
+    if not valid_content(sha1, jar_content):
+        raise Exception("Downloaded JAR sha1 does not match published sha1")
     with open(jar_path, mode="wb") as jar:
         jar.write(jar_content)
         if verbose:
             print("Saved " + jar.name)
     return jar_path
 
-def download_latest_agent():
+def valid_content(sha1, jar_content):
+    hasher = hashlib.sha1()
+    hasher.update(jar_content)
+    jar_hash = hasher.hexdigest()
+    if jar_hash != sha1:
+        print("Agent JAR validation failed!")
+        print("published sha1: " + str(sha1))
+        print("content   sha1: " + str(jar_hash))
+    elif verbose:
+        print("published sha1: " + str(sha1))
+        print("content   sha1: " + str(jar_hash))
+    return jar_hash == sha1
+
+def existing_agent_download(jar_path):
+    if not path.isfile(jar_path):
+        return None
+    with open(jar_path, mode="rb") as jar:
+        jar_content = jar.read()
+        if verbose:
+            print("Found existing jar {} of size {}".format(jar_path, str(len(jar_content))))
+        return jar_content
+
+def get_latest_agent():
     group, artifact, latest, versions = agent_metadata_summary()
     jar_path = download_verified_agent(latest)
     return jar_path
-
-def dummy_latest_agent():
-    return path.join(os.getcwd(), path.join(jar_dir, 'contrast-agent-3.7.5.15377.jar'))
-
 
 if __name__ == '__main__':
     group, artifact, latest, versions = agent_metadata_summary()
     if verbose:
         print ('group: {}, artifact: {}, latest: {}'.format(group, artifact, latest))
         print('avalable versions: ' + str(versions))
-    jar_path = download_latest_agent()
-    print("Validated Agent JAR downloaded to " + jar_path)
+    jar_path = get_latest_agent()
+    print("Validated Agent JAR exists at " + jar_path)
