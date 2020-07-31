@@ -14,8 +14,8 @@ class AcelShred(Shred):
 """create table acel(
 line integer primary key references log(line),
 type text not null, 
-class text not null,
-package text not null,
+class text,
+package text,
 application text,
 location text)"""
     tbl_index_sqls = [
@@ -27,13 +27,13 @@ location text)"""
     entry_signature = " ApplicationClassEventListener] "
     entry_selector = ShredEntrySelector(entry_signature)
 
-    # types = ["noput", "noapp", "orphan", "uninventoried", "contains", "adopted", "used"]
     type_signatures = {
         "noput": "- Not putting ",
         "noapp": "- Couldn't find app for ",
         "orphan": " to orphanage",
         "uninventoried": "missed classload events",
         "contains": "- url @detectLibraryClass",
+        "nolib": "- No library found",
         "adopted": "from orphanage by CodeSource path",
         "used": " to library usage for lib ",
     }
@@ -54,13 +54,15 @@ location text)"""
             r"\- Adding (?P<fqcn>\S+) to list of missed classload events for uninventoried (?P<location>~NOLOC~)?(?P<application>.*)$"),
         # - url @detectLibraryClass vfs:/opt/jboss/server/default/deploy/jbossweb.sar/jbossweb.jar/ contains org.apache.tomcat.util.buf.C2BConverter for application "platform-servlet"
         "contains": re.compile(
-            r"\- url \@detectLibraryClass (?P<location>.+) contains (?P<fqcn>\S+) for application \"(?P<application>.*)\"$"),
+            r"\- url \@detectLibraryClass (?P<location>.+) contains (?P<fqcn>\S+) for app \".+\" \((?P<application>.*)\)$"),
+        "nolib": re.compile(
+            r"\- No library found for \S+ in app \".+\" (?P<location>~NOLOC~)?(?P<fqcn>~NOCLASS~)?\((?P<application>.*)\)$"),
         # - Took {} from orphanage by CodeSource path {} and passing to app {}
         "adopted": re.compile(
             r"\- Took (?P<fqcn>\S+) from orphanage by CodeSource path (?P<location>.+) and passing to app \"(?P<application>.*)\"$"),
         # - Adding {} to library usage for lib {} in application "{}""
         "used": re.compile(
-            r"\- Adding (?P<fqcn>\S+) to library usage for lib (?P<jarname>\S+) in app (?P<location>~NOLOC~)?\"(?P<application>.*)\"$"),
+            r"\- Adding (?P<fqcn>\S+) to library usage for lib (?P<jarname>\S+) in app (?P<location>~NOLOC~)?\".+\" \((?P<application>.*)\)$"),
         # default type will be a misfit
         Shred.DEFAULT_TYPE: re.compile(r"^~NOMATCH~$")
     }
@@ -83,7 +85,7 @@ location text)"""
         return line, type, classname, package, extracted_vals["application"], extracted_vals["location"]
 
 
-logname = "petclinic"
+logname = "Spring5RouteCoverage"
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
