@@ -3,3 +3,8 @@ results/*
 *.db
 .idea
 venv
+/data/Jdk11ApisOnOracleJava12IT-1938.log
+/data/contrast-agent-3.7.5.15377.jar
+/data/Jdk11ApisOnOpenJdk12IT-4f646195f30-20200731T154301.log
+/data/Jdk11ApisOnOpenJdk12IT-5724.log
+/data/Jdk11ApisOnOracleJava12IT-0124.log
