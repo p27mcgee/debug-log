@@ -60,11 +60,12 @@ class PmclShred(Shred):
                extracted_vals["result"]
 
 
-logname = "old-war-petclinic.log"
-
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         logname = sys.argv[1]
+    else:
+        raise Exception("Missing command line parameter for log name.")
+
     debug_db = path.join("", logname + ".db")
     connection = createdb.connectdb(debug_db)
     lcmlShred = PmclShred()

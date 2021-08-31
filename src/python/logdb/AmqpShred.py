@@ -51,12 +51,13 @@ body text not null)
         match = AmqpShred.type_extractor.search(entry)
         return line, match.group('type'), extracted_vals['exchangeName'], extracted_vals['queueName'], extracted_vals['properties'], extracted_vals['body']
 
-logname = "sb-san-petclinic"
-
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         logname = sys.argv[1]
+    else:
+        raise Exception("Missing command line parameter for log name.")
+
     debug_db = path.join("", logname + ".db")
     connection = createdb.connectdb(debug_db)
-    mesgShred = AmqpShred()
-    mesgShred.initialize_tables(connection)
+    amqpShred = AmqpShred()
+    amqpShred.initialize_tables(connection)

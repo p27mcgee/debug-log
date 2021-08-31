@@ -52,12 +52,14 @@ def create_log_db(log_path, dbname):
     initialize_log_table(log_path, connection)
     return connection
 
-logname = "san-sb-petclinic"
 log_dir = "data"
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         logname = sys.argv[1]
-    debug_log = path.join(log_dir, logname + ".log")
+    else:
+        raise Exception("Missing command line parameter for log name.")
+
+    debug_log = path.join(log_dir, logname + ".err")
     debug_db = path.join("", logname + ".db")
     create_log_db(debug_log, debug_db)
