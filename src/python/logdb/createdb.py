@@ -2,6 +2,9 @@ import sqlite3
 import contextlib
 from os import path
 import sys
+
+SHOW_PROGRESS = False
+
 def classAndPackage(fqcn):
     lastdot = fqcn.rfind('.')
     classname = fqcn[lastdot + 1:]
@@ -23,7 +26,7 @@ def add_chunk_of_log_enties(chunk, cursor):
     return len(chunk)
 
 def initialize_log_table(infile, connection):
-    print("Initializing log table from {}".format(infile))
+    print("Initializing log table from {} ...".format(infile))
     total = 0
     with contextlib.closing(connection.cursor()) as cursor:
         # truncate log table
@@ -34,10 +37,13 @@ def initialize_log_table(infile, connection):
                 chunk.append((idx + 1, entry.rstrip("\n")))
                 if idx % chunksize == chunksize - 1:
                     total += add_chunk_of_log_enties(chunk, cursor)
-                    print(".", end ="")
+                    if SHOW_PROGRESS:
+                        print(".", end ="")
                     chunk.clear()
             total += add_chunk_of_log_enties(chunk, cursor)
-    print("\nAdded {} rows to table {}".format(str(total), "log"))
+    if SHOW_PROGRESS:
+        print("\n")
+    print("Added {} rows to table {}".format(str(total), "log"))
 
 def create_log_table(connection):
     with contextlib.closing(connection.cursor()) as cursor:
@@ -54,12 +60,14 @@ def create_log_db(log_path, dbname):
 
 log_dir = "data"
 
+def main(logname):
+    debug_log = path.join(log_dir, logname + ".err")
+    debug_db = path.join("", logname + ".db")
+    return create_log_db(debug_log, debug_db)
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         logname = sys.argv[1]
     else:
         raise Exception("Missing command line parameter for log name.")
-
-    debug_log = path.join(log_dir, logname + ".err")
-    debug_db = path.join("", logname + ".db")
-    create_log_db(debug_log, debug_db)
+    main(logname)

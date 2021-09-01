@@ -5,6 +5,7 @@ import contextlib
 class Shred(ABC):
     #    log_tbl_name = 'log'
     DEFAULT_TYPE = "default"
+    SHOW_PROGRESS = False
 
     def __init__(self,
                  tbl_creator,
@@ -65,13 +66,18 @@ class Shred(ABC):
             totalAdded = 0
             totalMisfits = 0
             last_good_line = -1
+            if not self.quiet:
+                print("Shredding to {}...".format(self.tbl_creator.tbl_name))
             for rows in self.entry_selector.select_batches(connection):
-                print(".", end="")
+                if not self.quiet and self.SHOW_PROGRESS:
+                        print(".", end="")
                 nAdded, nMisfits, last_good_line = self.add_rows(rows, last_good_line, connection)
                 totalAdded += nAdded
                 totalMisfits += nMisfits
             if not self.quiet:
-                print("\nAdded {} rows to table {}".format(str(totalAdded), self.tbl_creator.tbl_name))
+                if self.SHOW_PROGRESS:
+                    print("\n")
+                print("Added {} rows to table {}".format(str(totalAdded), self.tbl_creator.tbl_name))
                 print("Added {} rows to table {}".format(str(totalMisfits), self.tbl_creator.misfits_tbl_name))
 
     def add_rows(self, log_rows, last_good_line, connection):
