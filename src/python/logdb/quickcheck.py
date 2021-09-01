@@ -4,8 +4,8 @@ import contextlib
 from src.python.logdb.MesgShred import MesgShred
 
 TELLS = [
-            # ("MAX_CONTEXT_SOURCE_EVENTS", "Maximum source events reached for this context."),
-            #  ("MAX_CONTEXT_PROPAGATION_EVENTS", "Ignoring propagator "),
+            ("MAX_CONTEXT_SOURCE_EVENTS", "Maximum source events reached for this context."),
+             ("MAX_CONTEXT_PROPAGATION_EVENTS", "Ignoring propagator "),
              ("MAX_TRACE_TTL", "Cleared expired assessment context"),
              ("MAX_TRACE_TTL", "Removing expired key="),
              ("CONTEXT_MAP_PURGE_TIMEOUT", "Removing long-living runnable")
