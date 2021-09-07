@@ -28,6 +28,7 @@ WHERE
     with contextlib.closing(connection.cursor()) as cursor:
         cursor.execute(qrystr)
         print("Found {} log entries of concern.".format(max(cursor.rowcount,0)))
+        # print("Found {} log entries of concern.".format("{FIXME! max(cursor.rowcount,0)}"))
         while True:
             row = cursor.fetchone()
             if row == None:
