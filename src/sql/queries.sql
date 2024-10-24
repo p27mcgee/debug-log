@@ -84,12 +84,13 @@ from mesg
 where logger = 'Finding'
     and message like '!LM!TraceFate|Preflighted|%'
 
--- select unterminated requests
+-- select unterminated requests or responses
 select *
-from mesg
-where
-    (logger = 'CapturingHttpItem' or logger = 'b') and message like 'CRUMB request@%' || X'09' || X'09' || X'09' || 'BEGIN%'
-    and
-    logger = 'HttpManager' and message like '!LM!RequestTime|RequestEnded|uri=%'
-    or
-order by line
+from crumb
+where crumb."type" = 'req_begin'
+   and crumb.req NOT IN (SELECT req from crumb where crumb."type" = 'hist_req_begin')
+UNION ALL
+select *
+from crumb
+where crumb."type" = 'resp_begin'
+   and crumb.resp NOT IN (SELECT resp from crumb where crumb."type" = 'hist_resp_begin')

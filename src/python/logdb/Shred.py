@@ -205,8 +205,17 @@ class ShredEntryClassifier:
 
     def find_type(self, entry):
         for type, signature in self.type_signatures.items():
-            if signature in entry:
-                return type
+            if isinstance(signature, list):
+                istype = True
+                for part in signature:
+                    if part not in entry:
+                        istype = False
+                        break
+                if istype:
+                    return type
+            else:
+                if signature in entry:
+                    return type
         return Shred.DEFAULT_TYPE
 
 

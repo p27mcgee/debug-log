@@ -34,9 +34,12 @@ stackframe text)"""
     # "req": " request@",
     # "resp": " response@",
     type_signatures = {
-        "hist_beg": "\t\t\tBEGIN ",
-        "begin": "\t\tBEGIN ",
-        "end": "END & HISTORY:",
+        "hist_req_begin": ["request@", "\t\t\tBEGIN "],
+        "req_begin": ["request@", "\t\tBEGIN "],
+        "hist_resp_begin": ["response@", "\t\t\tBEGIN "],
+        "resp_begin": ["response@", "\t\tBEGIN "],
+        "req_end": ["request@", "END & HISTORY:"],
+        "resp_end": ["response@", "END & HISTORY:"],
         # what about !LM!RequestTime|RequestEnded
     }
     entry_classifier = ShredEntryClassifier(type_signatures)
@@ -44,10 +47,13 @@ stackframe text)"""
     extracted_val_names=["req", "resp", "url", "crumbthread", "crumbtime", "stackframe"]
     value_extractors = {
         # - Not putting java.util.Hashtable$KeySet in orphanage as its from bootstrapped classloade
-        "hist_beg": re.compile(r"XXX"),
+        "hist_req_begin": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB request@(?P<req>\S+) (?P<url>\S+)\t\t\tBEGIN.+(?P<resp>~NORESP~)?(?P<stackframe>~NOFRAME~)?$"),
         # - Couldn't find app for org.jboss.Main$ShutdownHook with CodeSource location file:/opt/jboss/bin/run.jar
-        "begin": re.compile(r"- CRUMB request@(?P<req>\S+) (?P<url>\S+)\t\tBEGIN \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} (?P<crumbthread>\S+)(?P<resp>~NORESP~)?(?P<stackframe>~NOFRAME~)?(?P<crumbtime>~NOFRAME~)?$"),
-        "end": re.compile(r"XXX"),
+        "req_begin": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB request@(?P<req>\S+) (?P<url>\S+)\t\tBEGIN.+(?P<resp>~NORESP~)?(?P<stackframe>~NOFRAME~)?$"),
+        "hist_resp_begin": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB response@(?P<resp>\S+) \t\t\tBEGIN.+(?P<req>~NOREQ~)?(?P<url>~NOURL~)?(?P<stackframe>~NOFRAME~)?$"),
+        "resp_begin": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB response@(?P<resp>\S+) \t\tBEGIN.+(?P<req>~NOREQ~)?(?P<url>~NOURL~)?(?P<stackframe>~NOFRAME~)?$"),
+        "req_end": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB request@(?P<req>\S+) (?P<url>\S+) END & HISTORY:(?P<resp>~NORESP~)?(?P<stackframe>~NOFRAME~)?$"),
+        "resp_end": re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB response@(?P<resp>\S+)  END & HISTORY:(?P<req>~NOREQ~)?(?P<url>~NOURL~)?(?P<stackframe>~NOFRAME~)?$"),
         # default type will be a misfit
         Shred.DEFAULT_TYPE: re.compile(r"^~NOMATCH~$")
     }
@@ -69,10 +75,10 @@ stackframe text)"""
 
 
 if __name__ == "__main__":
-    testline = "- CRUMB request@664592038 /ping		BEGIN 2024-10-21 19:42:28,477 reactor-http-nio-2"
-    regex = re.compile(r"- CRUMB request@(?P<req>\d+) (?P<url>\S+)\t\tBEGIN \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} (?P<thrd>\S+)(?P<resp>~NORESP~)?$")
+    testline = "2024-10-21 19:42:28,667 [reactor-http-nio-2 b] DEBUG - CRUMB request@664592038 /ping			BEGIN 2024-10-21 19:42:28,477 reactor-http-nio-2"
+    regex = re.compile(r"(?P<crumbtime>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \[(?P<crumbthread>\S+) \S+] DEBUG - CRUMB request@(?P<req>\S+) (?P<url>\S+)\t\t\tBEGIN.+(?P<resp>~NORESP~)?(?P<stackframe>~NOFRAME~)?$")
     match = regex.search(testline)
-    for extracted_val_name in ["req", "url", "thrd"]:
+    for extracted_val_name in ["crumbtime", "crumbthread", "req", "url", "resp", "stackframe"]:
         print("{}: {}".format(extracted_val_name, str(match.group(extracted_val_name))))
 
 

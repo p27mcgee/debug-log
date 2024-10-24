@@ -3,7 +3,6 @@ import sys
 
 from src.python.logdb.AcelShred import AcelShred
 from src.python.logdb.AmqpShred import AmqpShred
-from src.python.logdb.ChtiShred import ChtiShred
 from src.python.logdb.CrumbShred import CrumbShred
 from src.python.logdb.LmclShred import LmclShred
 from src.python.logdb.MesgShred import MesgShred
