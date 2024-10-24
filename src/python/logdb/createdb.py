@@ -58,7 +58,7 @@ def create_log_db(log_path, dbname):
     initialize_log_table(log_path, connection)
     return connection
 
-log_dir = "data"
+log_dir = "."
 
 def main(logname):
     debug_log = path.join(log_dir, logname + ".err")

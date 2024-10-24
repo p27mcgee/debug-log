@@ -71,7 +71,7 @@ stackframe text)"""
                          )
 
     def transform_values(self, line, entry, type, extracted_vals):
-        return line, type, extracted_vals["req"], extracted_vals["resp"], extracted_vals["url"], extracted_vals["crumbthread"], extracted_vals["crumbtime"], entry # extracted_vals["stackframe"]
+        return line, type, extracted_vals["req"], extracted_vals["resp"], extracted_vals["url"], extracted_vals["crumbthread"], extracted_vals["crumbtime"], extracted_vals["stackframe"]
 
 
 if __name__ == "__main__":
