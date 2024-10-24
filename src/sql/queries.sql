@@ -14,7 +14,7 @@ select *
 from mesg
 where
     logger = 'HttpManager' and message like '!LM!RequestTime|RequestEnded|uri=%'
-    or
+    or  -- (logger = 'CapturingHttpItem' or logger = 'b')
     logger = 'CapturingHttpItem' and message like 'CRUMB request@%' || X'09' || X'09' || X'09' || 'BEGIN%'
 order by line
 
@@ -84,3 +84,12 @@ from mesg
 where logger = 'Finding'
     and message like '!LM!TraceFate|Preflighted|%'
 
+-- select unterminated requests
+select *
+from mesg
+where
+    (logger = 'CapturingHttpItem' or logger = 'b') and message like 'CRUMB request@%' || X'09' || X'09' || X'09' || 'BEGIN%'
+    and
+    logger = 'HttpManager' and message like '!LM!RequestTime|RequestEnded|uri=%'
+    or
+order by line

@@ -4,11 +4,12 @@ import sys
 from src.python.logdb.AcelShred import AcelShred
 from src.python.logdb.AmqpShred import AmqpShred
 from src.python.logdb.ChtiShred import ChtiShred
+from src.python.logdb.CrumbShred import CrumbShred
 from src.python.logdb.LmclShred import LmclShred
 from src.python.logdb.MesgShred import MesgShred
 from src.python.logdb.createdb import create_log_db
 
-log_dir = "data"
+log_dir = "."
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -23,4 +24,4 @@ if __name__ == "__main__":
     LmclShred().initialize_tables(connection)
     AcelShred().initialize_tables(connection)
     AmqpShred().initialize_tables(connection)
-    ChtiShred().initialize_tables(connection)
+    CrumbShred().initialize_tables(connection)
